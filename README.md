@@ -94,4 +94,5 @@ We compared the performance of the standard HuggingFace PyTorch implementation a
 | Huggingface PyTorch | 45.4 Secs | 0.013 | 79.3 | 8.53% | batch_size=16 |
 | vLLM (Qwen3-0.6B) | 145.6 Secs | 0.04 | 24.7 | 6.99% | batch_size=1 |
 | **vLLM (Qwen3-0.6B)** | **26.3 Secs** | **0.007** | **136.9** | **7.03%** | batch_size=16 |
+
 *Note: RTF (Real Time Factor) - lower is better; RTFx (Speedup factor) - higher is better.*
