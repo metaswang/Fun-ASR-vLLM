@@ -76,6 +76,12 @@ docker compose down
 
 ## Build Docker Image
 
+To use the pre-built docker image:
+```bash
+docker pull soar97/triton-fun-asr:25.06
+```
+
+
 To build the image from scratch:
 
 ```bash
@@ -95,15 +101,6 @@ docker run -it --name "funasr-triton-server" \
     funasr-triton:latest
 ```
 
-### Run with Custom Model Repository
-
-```bash
-docker run -it --gpus all --net host --shm-size=2g \
-    -v /path/to/your/model_repo:/models/funasr_repo \
-    funasr-triton:latest \
-    tritonserver --model-repository=/models/funasr_repo
-```
-
 ## Start Triton Server (Without Docker)
 
 If running inside a container or directly on the host:
@@ -114,12 +111,6 @@ If running inside a container or directly on the host:
 
 # With custom options
 ./run_server.sh --http-port 8000 --grpc-port 8001 --metrics-port 8002 --gpu 0
-
-# Enable verbose logging
-./run_server.sh --verbose
-
-# Show help
-./run_server.sh --help
 ```
 
 ### Server Options
@@ -158,12 +149,6 @@ python3 http_client.py --audio assets/zh.wav --server localhost:8000 --model fun
 - `--server`: Triton server URL (default: `localhost:8000`)
 - `--model`: Model name (default: `funasr`)
 
-**Example Output:**
-```
-Transcribing: assets/zh.wav
-Transcript: 你好世界
-```
-
 ### gRPC Client Test
 
 Send a single inference request using gRPC:
@@ -176,22 +161,6 @@ python3 grpc_client.py --audio assets/zh.wav --server localhost:8001 --model fun
 - `--audio`: Path to audio file (required)
 - `--server`: Triton server URL (default: `localhost:8001`)
 - `--model`: Model name (default: `funasr`)
-
-**Example Output:**
-```
-Transcribing: assets/zh.wav
-Transcript: 你好世界
-```
-
-### Using curl for HTTP Inference
-
-```bash
-# Check server status
-curl -X GET http://localhost:8000/v2/health/ready
-
-# Get model metadata
-curl -X GET http://localhost:8000/v2/models/funasr
-```
 
 ## Benchmark
 
@@ -245,59 +214,25 @@ python3 Triton-ASR-Client/client.py \
     --compute-cer
 ```
 
-### Performance Tuning
+### Results
 
-For better throughput, adjust:
-- `--num-tasks`: Increase for higher concurrency (e.g., 64, 128)
-- `--shm-size`: Increase shared memory for Docker (e.g., `4g`, `8g`)
+**Benchmark Details:**
+- **Dataset:** SPEECHIO 007 test set (approx. 1 hour of audio)
+- **Hardware:** Single NVIDIA H20 GPU
+- **Model:** Fun-ASR-Nano with vLLM backend
 
-## Ports Reference
+| Concurrency | CER | Processing Time | P50 Latency | Avg Latency | RTF |
+|-------------|-----|-----------------|-------------|-------------|-----|
+| 8 | 7.04% | 44.56s | 450.99ms | 458.17ms | 0.0126 |
+| 16 | 7.00% | 27.96s | 533.36ms | 571.19ms | 0.0079 |
+| 32 | 7.07% | 24.51s | 952.93ms | 1001.56ms | 0.0069 |
 
-| Port | Protocol | Description |
-|------|----------|-------------|
-| 8000 | HTTP | HTTP inference endpoint |
-| 8001 | gRPC | gRPC inference endpoint |
-| 8002 | HTTP | Prometheus metrics |
+*Note: RTF (Real Time Factor) = processing_time / audio_duration. Lower is better.*
 
-## Troubleshooting
+## Model Configuration
 
-### Server Not Starting
+The model configuration is in `model_repo_funasr/funasr/config.pbtxt`. Key parameters:
 
-1. Check GPU availability:
-   ```bash
-   nvidia-smi
-   ```
-
-2. Verify model repository structure:
-   ```bash
-   ls -la model_repo_funasr/funasr/
-   ```
-
-3. Check container logs:
-   ```bash
-   docker compose logs -f
-   ```
-
-### Connection Refused
-
-1. Ensure server is running:
-   ```bash
-   curl http://localhost:8000/v2/health/ready
-   ```
-
-2. Check if ports are in use:
-   ```bash
-   netstat -tlnp | grep -E '8000|8001|8002'
-   ```
-
-### Out of Memory
-
-1. Reduce batch size in model config
-2. Increase shared memory:
-   ```bash
-   docker run --shm-size=4g ...
-   ```
-
-## License
-
-See the [LICENSE](../LICENSE) file for details.
+- `max_batch_size`: Maximum batch size for dynamic batching
+- `preferred_batch_size`: Preferred batch sizes for batching
+- `max_queue_delay_microseconds`: Maximum time to wait for batching

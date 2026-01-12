@@ -16,10 +16,10 @@ uv pip install -r requirements.txt
 <a name="usage-tutorial"></a>
 
 ## Features 📝
-- Support VLLM
+- Support vLLM
 - Support batch > 1 Inference
+- Integration with [NVIDIA Triton Inference Server](./triton_server/)
 - [ ] Support sensevoice encoder acceleration
-- [ ] Integration with Nvidia Triton Inference Server
 
 ## Usage 🛠️
 
@@ -96,3 +96,29 @@ We compared the performance of the standard HuggingFace PyTorch implementation a
 | **vLLM (Qwen3-0.6B)** | **26.3 Secs** | **0.007** | **136.9** | **7.03%** | batch_size=16 |
 
 *Note: RTF (Real Time Factor) - lower is better; RTFx (Speedup factor) - higher is better.*
+
+## Triton Inference Server Deployment 🚀
+
+For production deployment with high concurrency, we provide integration with NVIDIA Triton Inference Server.
+
+### Quick Start
+
+```bash
+cd triton_server
+
+# Using Docker Compose (recommended)
+docker compose up
+
+# Or pull and run the pre-built image
+docker pull soar97/triton-fun-asr:25.06
+```
+
+### Triton Performance (AISHELL-1 test set)
+
+| Concurrency | CER | Processing Time | P50 Latency | RTF |
+|-------------|-----|-----------------|-------------|-----|
+| 8 | 7.04% | 44.56s | 450.99ms | 0.0126 |
+| 16 | 7.00% | 27.96s | 533.36ms | 0.0079 |
+| 32 | 7.07% | 24.51s | 952.93ms | 0.0069 |
+
+For detailed setup instructions, see [triton_server/README.md](./triton_server/README.md).
