@@ -16,7 +16,7 @@ import triton_python_backend_utils as pb_utils
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from funasr_wrapper import FunASRTritonWrapper
-from feat_extractor import FunASRFeatExtractor
+from feat_extractor import FunASRFeatExtractorFromFrontend
 
 
 class TritonPythonModel:
@@ -61,13 +61,7 @@ class TritonPythonModel:
         self.logger.info(f"vLLM model dir: {self.vllm_model_dir}")
         self.logger.info(f"Encoder TRT engine: {self.encoder_trt_engine}")
 
-        # Initialize feature extractor
-        self.feat_extractor = FunASRFeatExtractor(
-            sample_rate=16000,
-            device_id=self.device_id
-        )
-
-        # Initialize model wrapper
+        # Initialize model wrapper first (we need its frontend for feature extraction)
         vllm_dir = self.vllm_model_dir if self.vllm_model_dir else None
         trt_engine = self.encoder_trt_engine if self.encoder_trt_engine else None
 
@@ -78,6 +72,12 @@ class TritonPythonModel:
             encoder_trt_engine=trt_engine,
             llm_dtype=self.llm_dtype,
             gpu_memory_utilization=self.gpu_memory_utilization,
+        )
+
+        # Initialize feature extractor using FunASR's frontend (no kaldifeat dependency)
+        self.feat_extractor = FunASRFeatExtractorFromFrontend(
+            frontend=self.model.frontend,
+            device=self.device
         )
 
         self.logger.info("FunASR model initialized successfully")
