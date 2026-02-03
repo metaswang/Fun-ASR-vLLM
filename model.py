@@ -499,7 +499,7 @@ class FunASRNano(nn.Module):
         fbank_beg = batch["fbank_beg"]
         fake_token_len = batch["fake_token_len"]
 
-        if not kwargs.get("tearchforing", False):
+        if not kwargs.get("teacherforcing", False):
             input_ids = source_ids
 
         input_ids[input_ids < 0] = 0
@@ -638,7 +638,7 @@ class FunASRNano(nn.Module):
             self.llm = self.llm.to(dtype_map[llm_dtype])
             inputs_embeds = inputs_embeds.to(dtype_map[llm_dtype])
             llm_kwargs = kwargs.get("llm_kwargs", {})
-            if not kwargs.get("teachforing", False):
+            if not kwargs.get("teacherforcing", False):
                 # new_llm_dir = "/workspace_yuekai/asr/Fun-ASR/new_llm"
                 # tokenizer.save_pretrained(new_llm_dir)
                 # self.llm.save_pretrained(new_llm_dir)
@@ -655,6 +655,7 @@ class FunASRNano(nn.Module):
                     generated_ids = self.llm.generate(
                         inputs_embeds=inputs_embeds,
                         max_new_tokens=kwargs.get("max_length", 512),
+                        pad_token_id=self.llm.config.pad_token_id or self.llm.config.eos_token_id,
                         **llm_kwargs,
                     )
                     response = tokenizer.batch_decode(
@@ -671,6 +672,7 @@ class FunASRNano(nn.Module):
                     inputs_embeds=inputs_embeds,
                     attention_mask=attention_mask,
                     labels=labels_ids,
+                    pad_token_id=self.llm.config.pad_token_id or self.llm.config.eos_token_id,
                     **llm_kwargs,
                 )
 
@@ -681,6 +683,7 @@ class FunASRNano(nn.Module):
                     skip_special_tokens=kwargs.get("skip_special_tokens", True),
                 )[0]
                 loss = model_outputs.loss.item()
+        response = kwargs.get("prev_text", "") + response
 
         ibest_writer = None
         if kwargs.get("output_dir") is not None:
@@ -689,10 +692,12 @@ class FunASRNano(nn.Module):
             ibest_writer = self.writer[f"{0 + 1}best_recog"]
 
         results = []
-        response_clean = re.sub(r"[^\w\s\u3000\u4e00-\u9fff]+", "", response)
+        # Clean special tokens for text output
+        text_cleaned = re.sub(r"<\|.*?\|>", "", response)
+        response_clean = re.sub(r"[^\w\s\u3000\u4e00-\u9fff]+", "", text_cleaned.replace("/sil", ""))
         result_i = {
             "key": key[0],
-            "text": re.sub(r'\s+', ' ', response.replace("/sil", " ")),
+            "text": re.sub(r'\s+', ' ', text_cleaned.replace("/sil", " ")),
             "text_tn": response_clean,
             "label": label,
         }
